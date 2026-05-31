@@ -21,8 +21,14 @@ export default function ScanPage() {
 
   // ค้นหาอุปกรณ์จาก BCH Code
   async function searchDevice() {
-    const code = bchCode.trim().toUpperCase()
+    let code = bchCode.trim().toUpperCase()
     if (!code) return
+    // ถ้ากรอกแค่ตัวเลข เช่น "00001" หรือ "1" ให้เติม BCH_ ให้อัตโนมัติ
+    if (/^\d+$/.test(code)) {
+      code = 'BCH_' + code.padStart(5, '0')
+    } else if (!code.startsWith('BCH_')) {
+      code = 'BCH_' + code
+    }
 
     setState('loading')
     const supabase = createClient()
