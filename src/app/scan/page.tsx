@@ -16,8 +16,9 @@ export default function ScanPage() {
   const [state, setState]       = useState<PageState>('idle')
   const [device, setDevice]     = useState<Device | null>(null)
   const [lastLog, setLastLog]   = useState<BatteryLog | null>(null)
-  const [techName, setTechName] = useState('')
-  const [note, setNote]         = useState('')
+  const [techName, setTechName]       = useState('')
+  const [note, setNote]               = useState('')
+  const [replacedAt, setReplacedAt]   = useState(() => toLocalDatetimeValue(new Date()))
 
   // ค้นหาอุปกรณ์จาก BCH Code
   async function searchDevice() {
@@ -68,6 +69,7 @@ export default function ScanPage() {
       bch_code:          device.bch_code,
       replaced_by_name:  techName || null,
       note:              note || null,
+      replaced_at:       new Date(replacedAt).toISOString(),
     })
 
     if (error) {
@@ -87,6 +89,7 @@ export default function ScanPage() {
     setLastLog(null)
     setTechName('')
     setNote('')
+    setReplacedAt(toLocalDatetimeValue(new Date()))
   }
 
   // คำนวณจำนวนวันที่ผ่านมาตั้งแต่เปลี่ยนล่าสุด
@@ -256,6 +259,16 @@ export default function ScanPage() {
               <p className="text-xs tracking-widest uppercase" style={{ color: 'var(--text-muted)' }}>
                 บันทึกการเปลี่ยนแบตเตอรี่
               </p>
+              <div>
+                <label className="block text-xs mb-1" style={{ color: 'var(--text-muted)' }}>วันที่เปลี่ยน</label>
+                <input
+                  type="datetime-local"
+                  value={replacedAt}
+                  max={toLocalDatetimeValue(new Date())}
+                  onChange={e => setReplacedAt(e.target.value)}
+                  className="w-full px-4 py-3 rounded-lg input-field"
+                />
+              </div>
               <input
                 type="text"
                 value={techName}
@@ -319,6 +332,12 @@ export default function ScanPage() {
       </main>
     </div>
   )
+}
+
+// แปลง Date เป็น string รูปแบบ datetime-local input (YYYY-MM-DDTHH:mm) ตาม timezone เครื่อง
+function toLocalDatetimeValue(date: Date) {
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
 }
 
 // แสดงข้อมูล label + value
