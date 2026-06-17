@@ -8,7 +8,7 @@ import NavBar from '@/components/NavBar'
 import type { Device, BatteryLog } from '@/lib/types'
 
 function fmtDate(iso: string) {
-  return new Date(iso).toLocaleDateString('th-TH-u-ca-gregory', { year: 'numeric', month: 'long', day: 'numeric' })
+  return new Date(iso).toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: 'numeric' })
 }
 
 function toDatetimeLocal(iso: string) {
@@ -260,7 +260,7 @@ export default function DevicePage() {
               <Field label="รอบเปลี่ยนแบต"  value={`ทุก ${device.replace_interval_days} วัน`} />
               <Field label="วันติดตั้ง"
                 value={device.install_date
-                  ? new Date(device.install_date).toLocaleDateString('th-TH-u-ca-gregory', { year: 'numeric', month: 'long', day: 'numeric' })
+                  ? new Date(device.install_date).toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: 'numeric' })
                   : null} />
             </div>
           )}
@@ -359,7 +359,7 @@ export default function DevicePage() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-2">
                           <span className="font-semibold text-sm">
-                            {date.toLocaleDateString('th-TH-u-ca-gregory', { year: 'numeric', month: 'long', day: 'numeric' })}
+                            {date.toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: 'numeric' })}
                           </span>
                           {isFirst && (
                             <span className="text-xs font-semibold flex-shrink-0" style={{ color: 'var(--amber)' }}>
@@ -368,7 +368,7 @@ export default function DevicePage() {
                           )}
                         </div>
                         <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                          {date.toLocaleTimeString('th-TH-u-ca-gregory', { hour: '2-digit', minute: '2-digit' })}
+                          {date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
                           {log.replaced_by_name && ` · ${log.replaced_by_name}`}
                         </p>
                         {log.note && (
