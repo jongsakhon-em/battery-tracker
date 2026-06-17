@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase'
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('')
+  const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -16,6 +16,7 @@ export default function LoginPage() {
 
     try {
       const supabase = createClient()
+      const email = `${username.trim().toLowerCase()}@bch.local`
       const { data, error } = await supabase.auth.signInWithPassword({ email, password })
 
       if (error) {
@@ -82,15 +83,15 @@ export default function LoginPage() {
               className="block text-xs font-semibold tracking-widest uppercase mb-2"
               style={{ color: 'var(--text-muted)' }}
             >
-              อีเมล
+              ชื่อผู้ใช้
             </label>
             <input
-              type="email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
+              type="text"
+              value={username}
+              onChange={e => setUsername(e.target.value)}
               required
-              autoComplete="email"
-              placeholder="user@hospital.com"
+              autoComplete="username"
+              placeholder="cesbch"
               className="w-full px-4 py-3 rounded-xl text-base input-field"
             />
           </div>
