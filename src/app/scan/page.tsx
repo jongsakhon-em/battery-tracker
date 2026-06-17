@@ -96,7 +96,7 @@ export default function ScanPage() {
   function getDaysInfo() {
     if (!lastLog) return null
     const days = Math.floor((Date.now() - new Date(lastLog.replaced_at).getTime()) / 86400000)
-    const date = new Date(lastLog.replaced_at).toLocaleDateString('th-TH', {
+    const date = new Date(lastLog.replaced_at).toLocaleDateString('th-TH-u-ca-gregory', {
       year: 'numeric', month: 'long', day: 'numeric',
     })
     return { days, date }
@@ -317,7 +317,7 @@ export default function ScanPage() {
             <div className="text-5xl mb-4" style={{ color: 'var(--green)' }}>✓</div>
             <p className="font-bold text-xl mb-1" style={{ color: 'var(--green)' }}>บันทึกสำเร็จ</p>
             <p className="text-sm mb-6" style={{ color: 'var(--text-muted)' }}>
-              {device.bch_code} — {new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })}
+              {device.bch_code} — {new Date().toLocaleDateString('th-TH-u-ca-gregory', { year: 'numeric', month: 'long', day: 'numeric' })}
             </p>
             <button
               onClick={reset}
