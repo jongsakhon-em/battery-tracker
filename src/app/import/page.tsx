@@ -323,30 +323,37 @@ function CsvImport() {
       skipEmptyLines: true,
       complete: async (res) => {
         const supabase = createClient()
-        let success = 0
         const errors: string[] = []
 
-        for (const row of res.data) {
+        // แยก row ที่ valid ออกมา
+        const rows = res.data.filter((row) => {
           if (!row.bch_code || !row.equipment_name) {
             errors.push(`ข้ามแถว: ไม่มี bch_code หรือ equipment_name`)
-            continue
+            return false
           }
-          const { error } = await supabase.from('devices').upsert({
-            bch_code:             row.bch_code.trim().toUpperCase(),
-            item_no:              row.item_no ? parseInt(row.item_no) : null,
-            department:           row.department?.trim()  || null,
-            equipment_name:       row.equipment_name.trim(),
-            brand:                row.brand?.trim()       || null,
-            model:                row.model?.trim()       || null,
-            serial_no:            row.serial_no?.trim()   || null,
-            risk_level:           row.risk_level?.trim()  || null,
-            install_date:         row.install_date        || null,
-            warranty:             row.warranty?.trim()    || null,
-            replace_interval_days: row.replace_interval_days ? parseInt(row.replace_interval_days) : 365,
-          }, { onConflict: 'bch_code' })
+          return true
+        }).map((row) => ({
+          bch_code:              row.bch_code.trim().toUpperCase(),
+          item_no:               row.item_no ? parseInt(row.item_no) : null,
+          department:            row.department?.trim()  || null,
+          equipment_name:        row.equipment_name.trim(),
+          brand:                 row.brand?.trim()       || null,
+          model:                 row.model?.trim()       || null,
+          serial_no:             row.serial_no?.trim()   || null,
+          risk_level:            row.risk_level?.trim()  || null,
+          install_date:          row.install_date        || null,
+          warranty:              row.warranty?.trim()    || null,
+          replace_interval_days: row.replace_interval_days ? parseInt(row.replace_interval_days) : 365,
+        }))
 
-          if (error) errors.push(`${row.bch_code}: ${error.message}`)
-          else success++
+        // ส่ง batch ละ 200 แถว
+        const BATCH = 200
+        let success = 0
+        for (let i = 0; i < rows.length; i += BATCH) {
+          const chunk = rows.slice(i, i + BATCH)
+          const { error } = await supabase.from('devices').upsert(chunk, { onConflict: 'bch_code' })
+          if (error) errors.push(`batch ${i / BATCH + 1}: ${error.message}`)
+          else success += chunk.length
         }
 
         setResult({ success, failed: errors.length, errors })
