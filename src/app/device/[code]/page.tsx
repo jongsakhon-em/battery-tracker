@@ -11,10 +11,8 @@ function fmtDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: 'numeric' })
 }
 
-function toDatetimeLocal(iso: string) {
-  const d = new Date(iso)
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+function toDateOnly(iso: string) {
+  return iso.slice(0, 10)
 }
 
 export default function DevicePage() {
@@ -91,7 +89,7 @@ export default function DevicePage() {
   function startEditLog(log: BatteryLog) {
     setEditingLogId(log.id)
     setEditLogForm({
-      replaced_at:      toDatetimeLocal(log.replaced_at),
+      replaced_at:      toDateOnly(log.replaced_at),
       replaced_by_name: log.replaced_by_name || '',
       note:             log.note             || '',
     })
@@ -102,7 +100,7 @@ export default function DevicePage() {
     setSavingLog(true)
     const supabase = createClient()
     const { error } = await supabase.from('battery_logs').update({
-      replaced_at:      new Date(editLogForm.replaced_at).toISOString(),
+      replaced_at:      editLogForm.replaced_at + 'T00:00:00.000Z',
       replaced_by_name: editLogForm.replaced_by_name || null,
       note:             editLogForm.note             || null,
     }).eq('id', editingLogId)
@@ -300,10 +298,10 @@ export default function DevicePage() {
 
                   {isEditing ? (
                     <div className="space-y-3">
-                      <EditField label="วันเวลาที่เปลี่ยน">
-                        <input type="datetime-local"
+                      <EditField label="วันที่เปลี่ยน">
+                        <input type="date"
                           value={editLogForm.replaced_at}
-                          max={new Date().toISOString().slice(0, 16)}
+                          max={new Date().toISOString().slice(0, 10)}
                           onChange={e => setEditLogForm(f => ({ ...f, replaced_at: e.target.value }))}
                           className="w-full px-3 py-2 rounded-lg text-sm input-field" />
                       </EditField>
@@ -369,10 +367,11 @@ export default function DevicePage() {
                             </span>
                           )}
                         </div>
-                        <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                          {date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
-                          {log.replaced_by_name && ` · ${log.replaced_by_name}`}
-                        </p>
+                        {log.replaced_by_name && (
+                          <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                            {log.replaced_by_name}
+                          </p>
+                        )}
                         {log.note && (
                           <p className="text-xs mt-1 italic" style={{ color: 'var(--text-muted)' }}>{log.note}</p>
                         )}

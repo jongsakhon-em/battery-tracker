@@ -18,7 +18,7 @@ export default function ScanPage() {
   const [lastLog, setLastLog]   = useState<BatteryLog | null>(null)
   const [techName, setTechName]       = useState('')
   const [note, setNote]               = useState('')
-  const [replacedAt, setReplacedAt]   = useState(() => toLocalDatetimeValue(new Date()))
+  const [replacedAt, setReplacedAt]   = useState(() => todayDate())
 
   // ค้นหาอุปกรณ์จาก BCH Code
   async function searchDevice() {
@@ -69,7 +69,7 @@ export default function ScanPage() {
       bch_code:          device.bch_code,
       replaced_by_name:  techName || null,
       note:              note || null,
-      replaced_at:       new Date(replacedAt).toISOString(),
+      replaced_at:       replacedAt + 'T00:00:00.000Z',
     })
 
     if (error) {
@@ -89,16 +89,15 @@ export default function ScanPage() {
     setLastLog(null)
     setTechName('')
     setNote('')
-    setReplacedAt(toLocalDatetimeValue(new Date()))
+    setReplacedAt(todayDate())
   }
 
   // คำนวณจำนวนวันที่ผ่านมาตั้งแต่เปลี่ยนล่าสุด
   function getDaysInfo() {
     if (!lastLog) return null
-    const days = Math.floor((Date.now() - new Date(lastLog.replaced_at).getTime()) / 86400000)
-    const date = new Date(lastLog.replaced_at).toLocaleDateString('en-GB', {
-      year: 'numeric', month: 'long', day: 'numeric',
-    })
+    const logDate  = lastLog.replaced_at.slice(0, 10)
+    const days     = Math.floor((new Date(todayDate()).getTime() - new Date(logDate).getTime()) / 86400000)
+    const date     = new Date(logDate).toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: 'numeric' })
     return { days, date }
   }
 
@@ -262,9 +261,9 @@ export default function ScanPage() {
               <div>
                 <label className="block text-xs mb-1" style={{ color: 'var(--text-muted)' }}>วันที่เปลี่ยน</label>
                 <input
-                  type="datetime-local"
+                  type="date"
                   value={replacedAt}
-                  max={toLocalDatetimeValue(new Date())}
+                  max={todayDate()}
                   onChange={e => setReplacedAt(e.target.value)}
                   className="w-full px-4 py-3 rounded-lg input-field"
                 />
@@ -334,10 +333,8 @@ export default function ScanPage() {
   )
 }
 
-// แปลง Date เป็น string รูปแบบ datetime-local input (YYYY-MM-DDTHH:mm) ตาม timezone เครื่อง
-function toLocalDatetimeValue(date: Date) {
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
+function todayDate() {
+  return new Date().toISOString().slice(0, 10)
 }
 
 // แสดงข้อมูล label + value
