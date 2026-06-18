@@ -64,18 +64,15 @@ export default function DashboardPage() {
       const withStatus: DeviceWithStatus[] = devicesData.map((device) => {
         const last_replaced_at = latestMap.get(device.bch_code) ?? null
 
-        // ถ้ามี log ใช้วันเปลี่ยนล่าสุด ถ้าไม่มีใช้วันติดตั้งแทน
-        const referenceDate = last_replaced_at ?? device.install_date ?? null
-
         let days_since: number | null = null
         let status: Status = 'never'
 
-        if (referenceDate) {
-          days_since = Math.floor((Date.now() - new Date(referenceDate).getTime()) / 86400000)
-          const ratio = days_since / device.replace_interval_days
-          if (ratio >= 1)         status = 'overdue'
-          else if (ratio >= 0.85) status = 'due_soon'
-          else                    status = 'ok'
+        if (last_replaced_at) {
+          days_since = Math.floor((Date.now() - new Date(last_replaced_at).getTime()) / 86400000)
+          const remaining = device.replace_interval_days - days_since
+          if (remaining <= 0)  status = 'overdue'
+          else if (remaining <= 60) status = 'due_soon'
+          else                 status = 'ok'
         }
 
         return { ...device, last_replaced_at, days_since, status }
@@ -215,24 +212,20 @@ export default function DashboardPage() {
 
                       {/* จำนวนวัน */}
                       <div className="text-right flex-shrink-0">
-                        {device.days_since !== null ? (
-                          <>
-                            <p className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>
-                              อายุแบต <span className="font-bold" style={{ color: cfg.color }}>{device.days_since}</span> วัน
-                            </p>
-                            {device.status === 'overdue' && (
-                              <p className="text-[10px] mt-0.5" style={{ color: 'var(--red)' }}>
-                                เกินกำหนดไปแล้ว {device.days_since - device.replace_interval_days} วัน
-                              </p>
-                            )}
-                            {device.status === 'due_soon' && (
-                              <p className="text-[10px] mt-0.5" style={{ color: 'var(--amber)' }}>
-                                อีก {device.replace_interval_days - device.days_since} วัน จะครบกำหนด
-                              </p>
-                            )}
-                          </>
-                        ) : (
-                          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>—</p>
+                        <p className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>
+                          อายุแบต <span className="font-bold" style={{ color: cfg.color }}>
+                            {device.days_since ?? 0}
+                          </span> วัน
+                        </p>
+                        {device.status === 'overdue' && (
+                          <p className="text-[10px] mt-0.5" style={{ color: 'var(--red)' }}>
+                            เกินกำหนดไปแล้ว {device.days_since! - device.replace_interval_days} วัน
+                          </p>
+                        )}
+                        {device.status === 'due_soon' && (
+                          <p className="text-[10px] mt-0.5" style={{ color: 'var(--amber)' }}>
+                            อีก {device.replace_interval_days - device.days_since!} วัน จะครบกำหนด
+                          </p>
                         )}
                       </div>
                     </Link>
