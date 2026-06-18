@@ -31,6 +31,7 @@ export default function DashboardPage() {
   const [devices, setDevices] = useState<DeviceWithStatus[]>([])
   const [loading, setLoading] = useState(true)
   const [filter,  setFilter]  = useState<Status | 'all'>('all')
+  const [search,  setSearch]  = useState('')
 
   useEffect(() => {
     async function load() {
@@ -102,7 +103,12 @@ export default function DashboardPage() {
     never:    devices.filter(d => d.status === 'never').length,
   }
 
-  const filtered = filter === 'all' ? devices : devices.filter(d => d.status === filter)
+  const q = search.trim().toLowerCase()
+  const filtered = devices.filter(d => {
+    if (filter !== 'all' && d.status !== filter) return false
+    if (!q) return true
+    return d.bch_code.toLowerCase().includes(q) || (d.department ?? '').toLowerCase().includes(q)
+  })
 
   return (
     <div className="min-h-screen pb-24 sm:pb-0">
@@ -157,6 +163,15 @@ export default function DashboardPage() {
                 )
               })}
             </div>
+
+            {/* ช่องค้นหา */}
+            <input
+              type="text"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="ค้นหารหัสเครื่อง หรือ แผนก..."
+              className="w-full px-4 py-3 rounded-xl text-sm input-field mb-4"
+            />
 
             {/* รายการอุปกรณ์ */}
             {filtered.length === 0 ? (
