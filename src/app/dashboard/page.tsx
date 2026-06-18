@@ -62,11 +62,15 @@ export default function DashboardPage() {
       // คำนวณสถานะแต่ละเครื่องจาก map (ไม่มี network request เพิ่ม)
       const withStatus: DeviceWithStatus[] = devicesData.map((device) => {
         const last_replaced_at = latestMap.get(device.bch_code) ?? null
+
+        // ถ้ามี log ใช้วันเปลี่ยนล่าสุด ถ้าไม่มีใช้วันติดตั้งแทน
+        const referenceDate = last_replaced_at ?? device.install_date ?? null
+
         let days_since: number | null = null
         let status: Status = 'never'
 
-        if (last_replaced_at) {
-          days_since = Math.floor((Date.now() - new Date(last_replaced_at).getTime()) / 86400000)
+        if (referenceDate) {
+          days_since = Math.floor((Date.now() - new Date(referenceDate).getTime()) / 86400000)
           const ratio = days_since / device.replace_interval_days
           if (ratio >= 1)         status = 'overdue'
           else if (ratio >= 0.85) status = 'due_soon'
