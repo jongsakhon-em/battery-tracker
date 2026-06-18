@@ -217,10 +217,19 @@ export default function DashboardPage() {
                       <div className="text-right flex-shrink-0">
                         {device.days_since !== null ? (
                           <>
-                            <p className="font-bold text-lg leading-none" style={{ color: cfg.color }}>
-                              {device.days_since}
+                            <p className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>
+                              อายุแบต <span className="font-bold" style={{ color: cfg.color }}>{device.days_since}</span> วัน
                             </p>
-                            <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-muted)' }}>วัน</p>
+                            {device.status === 'overdue' && (
+                              <p className="text-[10px] mt-0.5" style={{ color: 'var(--red)' }}>
+                                เกินกำหนดไปแล้ว {device.days_since - device.replace_interval_days} วัน
+                              </p>
+                            )}
+                            {device.status === 'due_soon' && (
+                              <p className="text-[10px] mt-0.5" style={{ color: 'var(--amber)' }}>
+                                อีก {device.replace_interval_days - device.days_since} วัน จะครบกำหนด
+                              </p>
+                            )}
                           </>
                         ) : (
                           <p className="text-sm" style={{ color: 'var(--text-muted)' }}>—</p>
