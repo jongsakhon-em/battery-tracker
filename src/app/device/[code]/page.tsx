@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase'
 import NavBar from '@/components/NavBar'
@@ -19,6 +19,7 @@ function toDatetimeLocal(iso: string) {
 
 export default function DevicePage() {
   const params = useParams()
+  const router = useRouter()
   const code   = decodeURIComponent(params.code as string)
 
   const [device,  setDevice]  = useState<Device | null>(null)
@@ -144,10 +145,11 @@ export default function DevicePage() {
       <NavBar />
       <main className="max-w-lg mx-auto px-4 pt-6">
 
-        <Link href="/scan" className="inline-flex items-center gap-1 text-sm mb-6 transition-colors"
+        <button onClick={() => router.back()}
+          className="inline-flex items-center gap-1 text-sm mb-6 transition-colors"
           style={{ color: 'var(--text-muted)' }}>
           ← กลับ
-        </Link>
+        </button>
 
         {/* การ์ดข้อมูลเครื่อง */}
         <div className="rounded-xl p-5 mb-6"

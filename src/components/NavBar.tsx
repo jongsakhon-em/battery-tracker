@@ -16,8 +16,8 @@ export default function NavBar() {
   }
 
   const navItems = [
-    { href: '/scan',      label: 'ค้นหา',    icon: SearchIcon },
     { href: '/dashboard', label: 'แดชบอร์ด', icon: DashIcon },
+    { href: '/scan',      label: 'ค้นหา',    icon: SearchIcon },
     { href: '/import',    label: 'นำเข้า',   icon: ImportIcon },
   ]
 

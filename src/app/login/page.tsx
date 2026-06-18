@@ -31,7 +31,7 @@ export default function LoginPage() {
         return
       }
 
-      window.location.href = '/scan'
+      window.location.href = '/dashboard'
     } catch (err: any) {
       setError(`Network error: ${err.message}`)
       setLoading(false)
