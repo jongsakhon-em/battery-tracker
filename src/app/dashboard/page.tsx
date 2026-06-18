@@ -68,11 +68,19 @@ export default function DashboardPage() {
         let status: Status = 'never'
 
         if (last_replaced_at) {
+          // มี log → คำนวณจาก log ล่าสุด
           days_since = Math.floor((Date.now() - new Date(last_replaced_at).getTime()) / 86400000)
           const remaining = device.replace_interval_days - days_since
-          if (remaining <= 0)  status = 'overdue'
+          if (remaining <= 0)       status = 'overdue'
           else if (remaining <= 60) status = 'due_soon'
-          else                 status = 'ok'
+          else                      status = 'ok'
+        } else if (device.install_date) {
+          // ไม่มี log → คำนวณจาก install_date แต่ถ้าเกินกำหนดให้เป็น never แทน
+          days_since = Math.floor((Date.now() - new Date(device.install_date).getTime()) / 86400000)
+          const remaining = device.replace_interval_days - days_since
+          if (remaining <= 0)       status = 'never'
+          else if (remaining <= 60) status = 'due_soon'
+          else                      status = 'ok'
         }
 
         return { ...device, last_replaced_at, days_since, status }
