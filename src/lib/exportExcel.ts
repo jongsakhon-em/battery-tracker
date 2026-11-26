@@ -39,6 +39,7 @@ export async function exportDashboardExcel(
   devices: DeviceWithStatus[],
   logs: Pick<BatteryLog, 'bch_code' | 'replaced_at' | 'replaced_by_name' | 'note'>[],
   statusLabel: Record<Status, string>,
+  periodTag = '',  // เช่น '2025' หรือ '2025-03' → ต่อท้ายชื่อไฟล์
 ) {
   const XLSX = await import('xlsx')
 
@@ -93,5 +94,6 @@ export async function exportDashboardExcel(
   XLSX.utils.book_append_sheet(wb, wsStatus,  'สถานะ')
   XLSX.utils.book_append_sheet(wb, wsHistory, 'ประวัติการเปลี่ยน')
 
-  XLSX.writeFile(wb, `battery-status-${today()}.xlsx`)
+  const name = periodTag ? `battery-status-${periodTag}_${today()}` : `battery-status-${today()}`
+  XLSX.writeFile(wb, `${name}.xlsx`)
 }

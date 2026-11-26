@@ -18,6 +18,22 @@ const STATUS_CONFIG: Record<Status, { label: string; color: string; bg: string; 
 
 const STATUS_ORDER: Status[] = ['overdue', 'due_soon', 'never', 'ok']
 
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December']
+
+// ISO → 'YYYY-MM' ตามวันในเวลาเครื่อง (ตรงกับวันที่ที่แสดงในแอป/Excel)
+function monthKey(iso: string): string {
+  const d = new Date(iso)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+}
+
+// log นี้อยู่ในช่วงที่เลือกไหม (year '' = ไม่กรอง · month '' = ทั้งปี)
+function inPeriod(iso: string, year: string, month: string): boolean {
+  if (!year) return true
+  const key = monthKey(iso)
+  return month ? key === `${year}-${month}` : key.startsWith(`${year}-`)
+}
+
 export default function DashboardPage() {
   useRequireAuth()
   const [devices, setDevices] = useState<DeviceWithStatus[]>([])
@@ -25,6 +41,10 @@ export default function DashboardPage() {
   const [filter,  setFilter]  = useState<Status | 'all'>('all')
   const [search,  setSearch]  = useState('')
   const [exporting, setExporting] = useState(false)
+  // ตัวกรองช่วงเวลาที่เปลี่ยนแบต: เครื่องที่ "เคยเปลี่ยน" ในปี/เดือนนั้น
+  const [year,  setYear]  = useState('')   // '' = ทุกปี
+  const [month, setMonth] = useState('')   // '' = ทั้งปี · '01'..'12'
+  const [logMonths, setLogMonths] = useState<Map<string, Set<string>>>(new Map())  // bch_code → {'YYYY-MM'}
 
   useEffect(() => {
     async function load() {
@@ -46,13 +66,18 @@ export default function DashboardPage() {
         .order('id')
         .range(from, to))
 
-      // สร้าง map: bch_code → replaced_at ล่าสุด (loop แค่ครั้งเดียว)
+      // สร้าง map: bch_code → replaced_at ล่าสุด และ bch_code → เดือนที่เคยเปลี่ยน (loop แค่ครั้งเดียว)
       const latestMap = new Map<string, string>()
+      const monthsMap = new Map<string, Set<string>>()
       for (const log of allLogs) {
         if (!latestMap.has(log.bch_code)) {
           latestMap.set(log.bch_code, log.replaced_at)
         }
+        let set = monthsMap.get(log.bch_code)
+        if (!set) { set = new Set(); monthsMap.set(log.bch_code, set) }
+        set.add(monthKey(log.replaced_at))
       }
+      setLogMonths(monthsMap)
 
       // คำนวณสถานะแต่ละเครื่องจาก map (ไม่มี network request เพิ่ม)
       const withStatus: DeviceWithStatus[] = devicesData.map((device) => {
@@ -117,8 +142,10 @@ export default function DashboardPage() {
       const labels = Object.fromEntries(
         STATUS_ORDER.map(s => [s, STATUS_CONFIG[s].label])
       ) as Record<Status, string>
+      // ชีตประวัติ: ถ้าเลือกช่วงเวลา ใส่เฉพาะ log ในช่วงนั้น
+      const periodLogs = logs.filter(l => inPeriod(l.replaced_at, year, month))
       const { exportDashboardExcel } = await import('@/lib/exportExcel')
-      await exportDashboardExcel(filtered, logs, labels)
+      await exportDashboardExcel(filtered, periodLogs, labels, periodTag)
     } catch (err) {
       console.error('Export error:', err)
       alert('Export ไม่สำเร็จ ลองใหม่อีกครั้ง')
@@ -127,9 +154,23 @@ export default function DashboardPage() {
     }
   }
 
+  // ปีที่มี log จริง (ใหม่ → เก่า) สำหรับ dropdown
+  const years = Array.from(new Set(
+    Array.from(logMonths.values()).flatMap(set => Array.from(set, k => k.slice(0, 4)))
+  )).sort().reverse()
+  const periodKey   = year ? (month ? `${year}-${month}` : year) : ''
+  const periodTag   = periodKey  // ต่อท้ายชื่อไฟล์ export เช่น 2025-03
+  const periodLabel = year ? (month ? `${MONTHS[Number(month) - 1]} ${year}` : `ปี ${year}`) : ''
+
   const q = search.trim().toLowerCase()
   const filtered = devices.filter(d => {
     if (filter !== 'all' && d.status !== filter) return false
+    if (year) {
+      const set = logMonths.get(d.bch_code)
+      if (!set) return false
+      const hit = month ? set.has(`${year}-${month}`) : Array.from(set).some(k => k.startsWith(`${year}-`))
+      if (!hit) return false
+    }
     if (!q) return true
     return d.bch_code.toLowerCase().includes(q) || (d.department ?? '').toLowerCase().includes(q)
   })
@@ -207,6 +248,36 @@ export default function DashboardPage() {
                 {exporting ? 'กำลังส่งออก...' : 'Export Excel'}
               </button>
             </div>
+
+            {/* ตัวกรองช่วงเวลาที่เปลี่ยนแบต */}
+            <div className="flex gap-2 mb-2">
+              <select
+                value={year}
+                onChange={e => { setYear(e.target.value); if (!e.target.value) setMonth('') }}
+                className="flex-1 min-w-0 px-4 py-3 rounded-xl text-sm input-field"
+              >
+                <option value="">เปลี่ยนแบต: ทุกปี</option>
+                {years.map(y => <option key={y} value={y}>ปี {y}</option>)}
+              </select>
+              <select
+                value={month}
+                onChange={e => setMonth(e.target.value)}
+                disabled={!year}
+                className="flex-1 min-w-0 px-4 py-3 rounded-xl text-sm input-field disabled:opacity-40"
+              >
+                <option value="">ทุกเดือน</option>
+                {MONTHS.map((m, i) => {
+                  const v = String(i + 1).padStart(2, '0')
+                  return <option key={v} value={v}>{m}</option>
+                })}
+              </select>
+            </div>
+            {year ? (
+              <p className="text-xs mb-4" style={{ color: 'var(--text-muted)' }}>
+                เปลี่ยนแบตใน {periodLabel}: <span className="font-bold" style={{ color: 'var(--amber)' }}>{filtered.length}</span> เครื่อง
+                {(filter !== 'all' || q) && ' (รวมตัวกรองอื่นด้วย)'}
+              </p>
+            ) : <div className="mb-2" />}
 
             {/* รายการอุปกรณ์ */}
             {filtered.length === 0 ? (
