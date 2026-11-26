@@ -5,16 +5,8 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase'
 import NavBar from '@/components/NavBar'
 import { useRequireAuth } from '@/lib/useRequireAuth'
-import type { Device } from '@/lib/types'
-
-// สถานะของแต่ละเครื่อง
-type Status = 'overdue' | 'due_soon' | 'ok' | 'never'
-
-interface DeviceWithStatus extends Device {
-  last_replaced_at: string | null
-  days_since:       number | null
-  status:           Status
-}
+import { fetchAll } from '@/lib/fetchAll'
+import type { BatteryLog, Device, DeviceWithStatus, Status } from '@/lib/types'
 
 // config สี/ข้อความของแต่ละสถานะ
 const STATUS_CONFIG: Record<Status, { label: string; color: string; bg: string; border: string }> = {
@@ -32,29 +24,31 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [filter,  setFilter]  = useState<Status | 'all'>('all')
   const [search,  setSearch]  = useState('')
+  const [exporting, setExporting] = useState(false)
 
   useEffect(() => {
     async function load() {
       try {
       const supabase = createClient()
 
-      // ดึงอุปกรณ์ทั้งหมด
-      const { data: devicesData, error: devErr } = await supabase
+      // ดึงอุปกรณ์ทั้งหมด (แบ่งหน้าทีละ 1,000 — Supabase ตัดที่ 1,000 แถวต่อ request)
+      const devicesData = await fetchAll<Device>((from, to) => supabase
         .from('devices')
         .select('*')
         .order('bch_code')
+        .range(from, to))
 
-      if (devErr || !devicesData) { return }
-
-      // ดึง log ทั้งหมดในครั้งเดียว (แค่ bch_code + replaced_at)
-      const { data: allLogs } = await supabase
+      // ดึง log ทั้งหมด (แค่ bch_code + replaced_at) — order id เป็นตัวตัดสินเมื่อวันเท่ากัน ให้แบ่งหน้าได้คงที่
+      const allLogs = await fetchAll<Pick<BatteryLog, 'bch_code' | 'replaced_at'>>((from, to) => supabase
         .from('battery_logs')
         .select('bch_code, replaced_at')
         .order('replaced_at', { ascending: false })
+        .order('id')
+        .range(from, to))
 
       // สร้าง map: bch_code → replaced_at ล่าสุด (loop แค่ครั้งเดียว)
       const latestMap = new Map<string, string>()
-      for (const log of allLogs ?? []) {
+      for (const log of allLogs) {
         if (!latestMap.has(log.bch_code)) {
           latestMap.set(log.bch_code, log.replaced_at)
         }
@@ -106,6 +100,31 @@ export default function DashboardPage() {
     due_soon: devices.filter(d => d.status === 'due_soon').length,
     ok:       devices.filter(d => d.status === 'ok').length,
     never:    devices.filter(d => d.status === 'never').length,
+  }
+
+  // Export Excel ตามรายการที่กรองอยู่ (ดึง log เต็มตอนกด เพื่อไม่ให้ dashboard โหลดหนัก)
+  async function handleExport() {
+    setExporting(true)
+    try {
+      const supabase = createClient()
+      const logs = await fetchAll<Pick<BatteryLog, 'bch_code' | 'replaced_at' | 'replaced_by_name' | 'note'>>((from, to) => supabase
+        .from('battery_logs')
+        .select('bch_code, replaced_at, replaced_by_name, note')
+        .order('bch_code')
+        .order('replaced_at', { ascending: false })
+        .order('id')
+        .range(from, to))
+      const labels = Object.fromEntries(
+        STATUS_ORDER.map(s => [s, STATUS_CONFIG[s].label])
+      ) as Record<Status, string>
+      const { exportDashboardExcel } = await import('@/lib/exportExcel')
+      await exportDashboardExcel(filtered, logs, labels)
+    } catch (err) {
+      console.error('Export error:', err)
+      alert('Export ไม่สำเร็จ ลองใหม่อีกครั้ง')
+    } finally {
+      setExporting(false)
+    }
   }
 
   const q = search.trim().toLowerCase()
@@ -169,14 +188,25 @@ export default function DashboardPage() {
               })}
             </div>
 
-            {/* ช่องค้นหา */}
-            <input
-              type="text"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="ค้นหารหัสเครื่อง หรือ แผนก..."
-              className="w-full px-4 py-3 rounded-xl text-sm input-field mb-4"
-            />
+            {/* ช่องค้นหา + ปุ่ม Export */}
+            <div className="flex gap-2 mb-4">
+              <input
+                type="text"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="ค้นหารหัสเครื่อง หรือ แผนก..."
+                className="flex-1 min-w-0 px-4 py-3 rounded-xl text-sm input-field"
+              />
+              <button
+                onClick={handleExport}
+                disabled={exporting || filtered.length === 0}
+                className="flex-shrink-0 px-4 py-3 rounded-xl text-sm font-bold transition-opacity disabled:opacity-40"
+                style={{ background: 'var(--amber)', color: 'var(--bg)' }}
+                title={`ส่งออก ${filtered.length} เครื่องที่แสดงอยู่`}
+              >
+                {exporting ? 'กำลังส่งออก...' : 'Export Excel'}
+              </button>
+            </div>
 
             {/* รายการอุปกรณ์ */}
             {filtered.length === 0 ? (

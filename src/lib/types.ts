@@ -25,3 +25,13 @@ export interface BatteryLog {
   note: string | null
   created_at: string
 }
+
+// สถานะแบตของแต่ละเครื่อง (คำนวณใน dashboard)
+export type Status = 'overdue' | 'due_soon' | 'ok' | 'never'
+
+// อุปกรณ์ + สถานะที่คำนวณแล้ว (ใช้ใน dashboard และ export Excel)
+export interface DeviceWithStatus extends Device {
+  last_replaced_at: string | null
+  days_since:       number | null
+  status:           Status
+}
