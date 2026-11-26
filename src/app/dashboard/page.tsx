@@ -142,7 +142,7 @@ export default function DashboardPage() {
       const labels = Object.fromEntries(
         STATUS_ORDER.map(s => [s, STATUS_CONFIG[s].label])
       ) as Record<Status, string>
-      // ชีตประวัติ: ถ้าเลือกช่วงเวลา ใส่เฉพาะ log ในช่วงนั้น
+      // คอลัมน์ "เปลี่ยนครั้งที่ N" + ชีตประวัติ: ถ้าเลือกช่วงเวลา ใส่เฉพาะ log ในช่วงนั้น
       const periodLogs = logs.filter(l => inPeriod(l.replaced_at, year, month))
       const { exportDashboardExcel } = await import('@/lib/exportExcel')
       await exportDashboardExcel(filtered, periodLogs, labels, periodTag)
